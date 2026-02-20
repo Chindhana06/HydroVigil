@@ -21,26 +21,6 @@ import NetworkMap from "./components/NetworkMap";
 import FaultTolerancePanel from "./components/FaultTolerancePanel";
 import ModelPerformancePanel from "./components/ModelPerformancePanel";
 import { runMlPrediction } from "./api/mlApi";
-const ML_API_URL = "http://127.0.0.1:8000/predict";
-
-async function fetchPrediction(sensorWindow) {
-  try {
-    const response = await fetch(ML_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sensor_data: sensorWindow,
-      }),
-    });
-
-    if (!response.ok) throw new Error("ML API error");
-
-    return await response.json();
-  } catch (err) {
-    console.error("ML backend error:", err);
-    return null;
-  }
-}
 const MAX_POINTS = 44;
 const TICK_MS = 900;
 const STORAGE_KEY = "hydrovigil_countermeasure_memory_v1";
@@ -247,15 +227,6 @@ function generateTelemetryPoint(step, phase) {
     level: clamp(level, 50, 84),
     anomalyLevel: clamp(anomalyLevel, 0, 1),
   };
-}
-
-function buildMlWindow(telemetryPoints) {
-  return telemetryPoints.slice(-10).map((p) => [
-    p.pressure,
-    p.flow,
-    p.level,
-    p.anomalyLevel,
-  ]);
 }
 
 function loadCountermeasureMemory() {
@@ -599,49 +570,55 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-  if (!mlDecision) return;
+    const telemetryTimer = setInterval(() => {
+      setTelemetry((prev) => {
+        const point = generateTelemetryPoint(tickRef.current, phaseRef.current);
+        tickRef.current += 1;
+        return [...prev, point].slice(-MAX_POINTS);
+      });
+    }, TICK_MS);
 
-  if (mlDecision === "ATTACK") {
-    setSystemStatus("active_attack");
-  } else if (mlDecision === "SUSPICIOUS") {
-    setSystemStatus("suspicious");
-  } else {
-    setSystemStatus("normal");
-  }
-}, [mlDecision]);
+    return () => clearInterval(telemetryTimer);
+  }, []);
 
-    // === REAL ML INFERENCE HOOK ===
+  useEffect(() => {
+    if (!mlDecision) return;
 
-useEffect(() => {
-  if (telemetry.length < 20) return;
-
-  console.log("🚀 Sending telemetry window to ML");
-
-  const runMl = async () => {
-    try {
-      const windowData = telemetry
-        .slice(-20)
-        .map(t => [t.pressure, t.flow, t.level]);
-
-      const result = await fetch("http://127.0.0.1:8000/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sensor_data: windowData })
-      }).then(res => res.json());
-
-      console.log("✅ ML RESULT:", result);
-
-      setMlDecision(result.final_decision);
-      setMlRiskScore(result.risk_score);
-      setMlConfidence(result.confidence);
-
-    } catch (err) {
-      console.error("❌ ML failed:", err);
+    if (mlDecision === "ATTACK") {
+      setSystemStatus("active_attack");
+    } else if (mlDecision === "SUSPICIOUS") {
+      setSystemStatus("suspicious");
+    } else {
+      setSystemStatus("normal");
     }
-  };
+  }, [mlDecision]);
 
-  runMl();
-}, [telemetry]);
+  useEffect(() => {
+    if (telemetry.length < 20) return;
+
+    let cancelled = false;
+
+    const runML = async () => {
+      try {
+        const windowData = telemetry.slice(-20).map((t) => [t.pressure, t.flow, t.level]);
+        const data = await runMlPrediction(windowData);
+
+        if (cancelled) return;
+
+        setMlDecision(data.final_decision);
+        setMlRiskScore(data.risk_score);
+        setMlConfidence(data.confidence);
+      } catch (err) {
+        if (!cancelled) console.error("ML inference failed:", err);
+      }
+    };
+
+    runML();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [telemetry]);
 
   
   useEffect(() => {
@@ -1013,3 +990,5 @@ useEffect(() => {
     </div>
   );
 }
+
+
