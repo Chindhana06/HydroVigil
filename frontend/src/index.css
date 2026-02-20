@@ -1,0 +1,62 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  border-color: rgba(156, 163, 175, 0.14);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(37, 99, 235, 0.12), transparent 42%),
+    radial-gradient(circle at 84% 0%, rgba(17, 24, 39, 0.6), transparent 36%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.72), rgba(11, 18, 32, 1));
+  background-color: #0b1220;
+  color: #e5e7eb;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.dashboard-grid {
+  background-image: linear-gradient(rgba(156, 163, 175, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(156, 163, 175, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.glass-panel {
+  backdrop-filter: blur(8px);
+  background-color: rgba(17, 24, 39, 0.78);
+  border: 1px solid rgba(156, 163, 175, 0.12);
+}
+
+.recharts-cartesian-grid line {
+  stroke: rgba(156, 163, 175, 0.16);
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.35);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.45);
+}
